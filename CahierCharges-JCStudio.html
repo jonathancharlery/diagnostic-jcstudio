@@ -775,8 +775,21 @@ function exportPDF() {
   doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(...C.grayBlue);
   doc.text("JC Studio SASU  ·  contact@jcstudio.fr  ·  SIREN 103 315 107", W/2, 292, { align:"center" });
 
-  const nomClient = state.client.nom ? state.client.nom.replace(/\s+/g,"_") : "client";
-  doc.save("CDC_JCStudio_" + nomClient + "_" + (state.mission.date || "").replace(/-/g,"") + ".pdf");
+
+  // Nommage automatique : CDC_JCStudio_NOM_Prenom_YYYYMMDD.pdf
+  function formatNomFichier(nomComplet) {
+    if (!nomComplet || nomComplet.trim() === "") return "Client";
+    const cleaned = nomComplet.replace(/^(M\.|Mme\.?|Dr\.|Me\.)\s*/i, "").trim();
+    const parts = cleaned.split(/\s+/);
+    if (parts.length === 1) return parts[0].toUpperCase();
+    const prenom = parts[parts.length - 1];
+    const nom = parts.slice(0, parts.length - 1).join("-").toUpperCase();
+    const prenomCap = prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase();
+    return nom + "_" + prenomCap;
+  }
+  const nomFichier = formatNomFichier(state.client.nom);
+  const dateFichier = (state.mission.date || "").replace(/-/g, "");
+  doc.save("CDC_JCStudio_" + nomFichier + (dateFichier ? "_" + dateFichier : "") + ".pdf");
 }
 
 // ─── INIT ───
