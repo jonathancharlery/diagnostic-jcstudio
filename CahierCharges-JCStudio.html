@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="CDC JCStudio"/>
 <meta name="theme-color" content="#07404A"/>
 <title>Cahier des Charges — JC Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --primary: #07404A;
@@ -312,14 +313,32 @@ function renderNav() {
     sum.onclick = () => { state.step = STEPS.length - 1; render(); };
     nav.appendChild(sum);
   } else {
+    // Nav récap : 3 boutons sur 2 lignes
+    nav.style.flexDirection = "column";
+    nav.style.gap = "8px";
+
+    const pdf = document.createElement("button");
+    pdf.className = "btn btn-summary"; pdf.textContent = "Télécharger le récap PDF";
+    pdf.style.width = "100%";
+    pdf.onclick = () => exportPDF();
+    nav.appendChild(pdf);
+
+    const row2 = document.createElement("div");
+    row2.style.cssText = "display:flex;gap:8px;width:100%";
+
     const restart = document.createElement("button");
-    restart.className = "btn btn-next"; restart.textContent = "← Modifier";
-    restart.onclick = () => { state.step = STEPS.length - 2; render(); };
-    nav.appendChild(restart);
+    restart.className = "btn btn-back"; restart.textContent = "← Modifier";
+    restart.style.flex = "1";
+    restart.onclick = () => { nav.style.flexDirection = ""; nav.style.gap = "10px"; state.step = STEPS.length - 2; render(); };
+    row2.appendChild(restart);
+
     const reset = document.createElement("button");
     reset.className = "btn btn-back"; reset.textContent = "Nouvelle mission";
-    reset.onclick = () => { if (confirm("Nouvelle mission ? Toutes les données seront effacées.")) { state = { step:0, activePiece:null, mission:{type:"",operateur:"",date:new Date().toISOString().split("T")[0],modules:[]}, client:{nom:"",tel:"",email:"",adresse:""}, pieces:[], style:{ambiances:[],couleursPref:"",couleursEviter:"",references:"",materiaux:[]}, budget:{fourchette:"",precision:"",delai:""}, notes:{contraintes:"",libres:""} }; render(); } };
-    nav.appendChild(reset);
+    reset.style.flex = "1";
+    reset.onclick = () => { if (confirm("Nouvelle mission ? Toutes les données seront effacées.")) { nav.style.flexDirection = ""; nav.style.gap = "10px"; state = { step:0, activePiece:null, mission:{type:"",operateur:"",date:new Date().toISOString().split("T")[0],modules:[]}, client:{nom:"",tel:"",email:"",adresse:""}, pieces:[], style:{ambiances:[],couleursPref:"",couleursEviter:"",references:"",materiaux:[]}, budget:{fourchette:"",precision:"",delai:""}, notes:{contraintes:"",libres:""} }; render(); } };
+    row2.appendChild(reset);
+
+    nav.appendChild(row2);
   }
 }
 
@@ -642,6 +661,122 @@ function deletePiece(i) {
     state.activePiece = null;
     render();
   }
+}
+
+// ─── EXPORT PDF ───
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+  const W = 210; const margin = 14; const lineH = 6;
+  let y = 0;
+
+  // Couleurs
+  const C = {
+    primary: [7,64,74], terracotta: [163,92,51], orange: [219,117,0],
+    sand: [221,215,201], grayBlue: [187,194,199], dark: [4,31,36], white: [255,255,255]
+  };
+
+  // Header
+  doc.setFillColor(...C.primary);
+  doc.rect(0, 0, W, 22, "F");
+  doc.setFillColor(...C.terracotta);
+  doc.rect(0, 22, W, 1.5, "F");
+  doc.setFontSize(9); doc.setTextColor(...C.grayBlue);
+  doc.text("JC STUDIO", margin, 9);
+  doc.setFontSize(13); doc.setTextColor(...C.sand);
+  doc.setFont("helvetica","bold");
+  doc.text("Cahier des charges", margin, 16);
+  doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...C.grayBlue);
+  doc.text(state.mission.date || "", W - margin, 16, { align:"right" });
+  y = 30;
+
+  function sectionTitle(title) {
+    y += 3;
+    doc.setFillColor(...C.primary);
+    doc.rect(margin, y, W - margin*2, 6, "F");
+    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(...C.orange);
+    doc.text(title.toUpperCase(), margin + 3, y + 4.2);
+    y += 9;
+  }
+
+  function row(label, value) {
+    if (!value || (Array.isArray(value) && value.length === 0)) return;
+    const val = Array.isArray(value) ? value.join(", ") : String(value);
+    doc.setFontSize(8); doc.setFont("helvetica","normal");
+    doc.setTextColor(...C.grayBlue); doc.text(label, margin + 2, y);
+    doc.setTextColor(...C.dark);
+    const lines = doc.splitTextToSize(val, W - margin*2 - 38);
+    doc.text(lines, margin + 38, y);
+    y += Math.max(lineH, lines.length * lineH);
+  }
+
+  function checkPage() { if (y > 270) { doc.addPage(); y = 14; } }
+
+  // Mission
+  sectionTitle("Mission");
+  row("Type", state.mission.type);
+  if (state.mission.operateur) row("Opérateur", state.mission.operateur);
+  row("Modules", state.mission.modules.map(k => MODULE_LABELS[k]).join(", "));
+  checkPage();
+
+  // Client
+  sectionTitle("Client");
+  row("Nom", state.client.nom);
+  if (state.client.tel) row("Téléphone", state.client.tel);
+  if (state.client.email) row("Email", state.client.email);
+  if (state.client.adresse) row("Adresse", state.client.adresse);
+  checkPage();
+
+  // Pièces
+  if (state.pieces.length > 0) {
+    sectionTitle("Pièces (" + state.pieces.length + ")");
+    state.pieces.forEach((p, i) => {
+      checkPage();
+      doc.setFontSize(9); doc.setFont("helvetica","bold"); doc.setTextColor(...C.terracotta);
+      doc.text((p.nom || "Pièce " + (i+1)) + (p.module ? " — " + MODULE_LABELS[p.module] : ""), margin + 2, y);
+      y += lineH;
+      if (p.longueur) row("Dimensions", p.longueur + " × " + p.largeur + " × " + p.hauteur + " m");
+      Object.entries(p.moduleData).forEach(([k, v]) => { if (v && (!Array.isArray(v) || v.length > 0)) row(k, v); });
+      if (p.notes) row("Notes", p.notes);
+      y += 2;
+    });
+  }
+  checkPage();
+
+  // Style
+  const s = state.style;
+  if (s.ambiances.length || s.couleursPref || s.materiaux.length) {
+    sectionTitle("Style");
+    if (s.ambiances.length) row("Ambiances", s.ambiances.join(", "));
+    if (s.couleursPref) row("Couleurs +", s.couleursPref);
+    if (s.couleursEviter) row("Couleurs -", s.couleursEviter);
+    if (s.references) row("Références", s.references);
+    if (s.materiaux.length) row("Matériaux", s.materiaux.join(", "));
+    checkPage();
+  }
+
+  // Budget
+  sectionTitle("Budget et délai");
+  if (state.budget.fourchette) row("Fourchette", state.budget.fourchette);
+  if (state.budget.precision) row("Précisions", state.budget.precision);
+  if (state.budget.delai) row("Délai", state.budget.delai);
+  checkPage();
+
+  // Notes
+  if (state.notes.contraintes || state.notes.libres) {
+    sectionTitle("Notes");
+    if (state.notes.contraintes) row("Contraintes", state.notes.contraintes);
+    if (state.notes.libres) row("Notes libres", state.notes.libres);
+  }
+
+  // Footer
+  doc.setFillColor(...C.primary);
+  doc.rect(0, 285, W, 12, "F");
+  doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(...C.grayBlue);
+  doc.text("JC Studio SASU  ·  contact@jcstudio.fr  ·  SIREN 103 315 107", W/2, 292, { align:"center" });
+
+  const nomClient = state.client.nom ? state.client.nom.replace(/\s+/g,"_") : "client";
+  doc.save("CDC_JCStudio_" + nomClient + "_" + (state.mission.date || "").replace(/-/g,"") + ".pdf");
 }
 
 // ─── INIT ───
