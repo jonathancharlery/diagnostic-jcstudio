@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="CDC JCStudio"/>
+<meta name="theme-color" content="#07404A"/>
+<title>Cahier des Charges — JC Studio</title>
+<style>
+  :root {
+    --primary: #07404A;
+    --primary-light: rgba(7,64,74,0.5);
+    --primary-faint: rgba(7,64,74,0.25);
+    --terracotta: #A35C33;
+    --orange: #DB7500;
+    --blue: #1992FC;
+    --light-blue: #62B8F5;
+    --sand: #DDD7C9;
+    --gray-blue: #BBC2C7;
+    --beige: #E6DCC6;
+    --brown: #B8A181;
+    --dark: #041F24;
+    --white: #FFFFFF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--dark); }
+  body { font-family: 'Courier New', monospace; color: var(--sand); }
+
+  #app { display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; }
+
+  /* HEADER */
+  .header {
+    background: var(--primary);
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 2px solid var(--terracotta);
+    flex-shrink: 0;
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .logo-badge {
+    width: 34px; height: 34px; background: var(--terracotta); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 13px; color: var(--white);
+  }
+  .header-title { font-size: 13px; color: var(--sand); font-weight: bold; }
+  .header-sub { font-size: 10px; color: var(--gray-blue); letter-spacing: 1.5px; text-transform: uppercase; }
+  .header-date { font-size: 10px; color: var(--gray-blue); }
+
+  /* PROGRESS */
+  .progress-bar {
+    background: var(--primary);
+    padding: 8px 16px 10px;
+    flex-shrink: 0;
+  }
+  .progress-track { display: flex; gap: 3px; margin-bottom: 6px; }
+  .progress-seg {
+    flex: 1; height: 3px; border-radius: 2px;
+    background: rgba(221,215,201,0.15);
+    transition: background 0.3s;
+  }
+  .progress-seg.done { background: var(--terracotta); }
+  .progress-seg.active { background: var(--orange); }
+  .progress-labels { display: flex; justify-content: space-between; }
+  .progress-label { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; color: var(--gray-blue); transition: color 0.3s; }
+  .progress-label.active { color: var(--orange); }
+  .progress-label.done { color: var(--sand); }
+
+  /* SCROLL AREA */
+  .content {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 20px 16px;
+    padding-bottom: 100px;
+  }
+
+  /* NAV */
+  .nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--dark);
+    border-top: 1px solid var(--primary);
+    padding: 10px 16px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    display: flex; gap: 10px;
+    z-index: 100;
+  }
+  .btn { border: none; border-radius: 10px; font-family: 'Courier New', monospace; font-size: 13px; font-weight: bold; cursor: pointer; padding: 14px; transition: all 0.2s; }
+  .btn-back { flex: 1; background: transparent; border: 1px solid var(--gray-blue); color: var(--gray-blue); }
+  .btn-next { flex: 2; background: var(--terracotta); color: var(--white); }
+  .btn-next.disabled { background: rgba(163,92,51,0.35); color: rgba(255,255,255,0.4); }
+  .btn-summary { flex: 2; background: var(--orange); color: var(--white); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 10px; color: var(--orange); text-transform: uppercase;
+    letter-spacing: 3px; margin-bottom: 18px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--primary);
+  }
+
+  /* FIELD */
+  .field { margin-bottom: 18px; }
+  .field-label { font-size: 9px; color: var(--gray-blue); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 7px; }
+
+  /* INPUTS */
+  input[type=text], input[type=email], input[type=tel], input[type=date], textarea, select {
+    width: 100%; background: var(--primary-faint);
+    border: 1px solid var(--primary); border-radius: 8px;
+    padding: 12px 14px; color: var(--sand);
+    font-family: 'Courier New', monospace; font-size: 13px;
+    outline: none; -webkit-appearance: none; appearance: none;
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  input[type=date] { color-scheme: dark; }
+  ::placeholder { color: rgba(187,194,199,0.5); }
+
+  /* CHIPS */
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    padding: 8px 13px; border-radius: 20px; font-size: 11px;
+    font-family: 'Courier New', monospace; cursor: pointer;
+    background: var(--primary-faint); border: 1px solid var(--primary);
+    color: var(--gray-blue); transition: all 0.15s; user-select: none;
+  }
+  .chip.active { background: var(--terracotta); border-color: var(--terracotta); color: var(--white); }
+  .chip.active-blue { background: var(--blue); border-color: var(--blue); color: var(--white); }
+  .chip.small { padding: 6px 10px; font-size: 10px; }
+
+  /* DIMENSIONS ROW */
+  .dims { display: flex; gap: 8px; }
+  .dims .field { flex: 1; }
+
+  /* SURFACE BADGE */
+  .surface-badge {
+    background: rgba(25,146,252,0.12); border: 1px solid rgba(25,146,252,0.3);
+    border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;
+    font-size: 11px; color: var(--light-blue);
+  }
+
+  /* PIECE CARD */
+  .piece-card {
+    background: rgba(7,64,74,0.3); border: 1px solid var(--primary);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer;
+  }
+  .piece-card-name { font-size: 13px; color: var(--sand); font-weight: bold; }
+  .piece-card-sub { font-size: 10px; color: var(--gray-blue); margin-top: 2px; }
+  .piece-arrow { color: var(--terracotta); font-size: 18px; }
+  .add-piece-btn {
+    width: 100%; padding: 14px;
+    background: transparent; border: 2px dashed var(--terracotta);
+    color: var(--terracotta); border-radius: 10px;
+    font-family: 'Courier New', monospace; font-size: 13px;
+    cursor: pointer; margin-top: 6px;
+  }
+  .delete-btn {
+    width: 100%; padding: 12px;
+    background: transparent; border: 1px solid rgba(255,68,68,0.4);
+    color: #ff6666; border-radius: 8px;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    cursor: pointer; margin-top: 10px;
+  }
+  .back-link {
+    background: transparent; border: none;
+    color: var(--light-blue); font-size: 12px; cursor: pointer;
+    padding: 0; margin-bottom: 16px; font-family: 'Courier New', monospace;
+    display: block;
+  }
+
+  /* SUMMARY */
+  .sum-section { margin-bottom: 18px; }
+  .sum-title {
+    font-size: 9px; color: var(--orange); text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 8px;
+    padding-bottom: 5px; border-bottom: 1px solid var(--primary);
+  }
+  .sum-row { display: flex; gap: 8px; margin-bottom: 5px; font-size: 11px; }
+  .sum-label { color: var(--gray-blue); min-width: 75px; flex-shrink: 0; }
+  .sum-value { color: var(--sand); }
+  .sum-piece {
+    background: rgba(7,64,74,0.3); border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .sum-piece-title { font-size: 11px; color: var(--orange); font-weight: bold; margin-bottom: 4px; }
+  .sum-piece-row { font-size: 10px; color: var(--sand); margin-top: 2px; }
+  .sum-footer {
+    background: rgba(219,117,0,0.1); border: 1px solid rgba(219,117,0,0.25);
+    border-radius: 10px; padding: 12px; margin-top: 16px;
+    font-size: 10px; color: var(--gray-blue); text-align: center;
+  }
+  .empty-state { text-align: center; padding: 32px 0; color: var(--gray-blue); font-size: 12px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-badge">JC</div>
+      <div>
+        <div class="header-sub">JC Studio</div>
+        <div class="header-title">Cahier des charges</div>
+      </div>
+    </div>
+    <div class="header-date" id="headerDate"></div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-track" id="progressTrack"></div>
+    <div class="progress-labels" id="progressLabels"></div>
+  </div>
+
+  <div class="content" id="mainContent"></div>
+
+  <div class="nav" id="navBar"></div>
+</div>
+
+<script>
+const STEPS = ["mission","client","pieces","style","budget","notes","summary"];
+const STEP_LABELS = ["Mission","Client","Pièces","Style","Budget","Notes","Récap"];
+const MODULE_LABELS = { dressing:"Dressing", cuisine:"Cuisine", sdb:"Salle de bain", bureau:"Bureau" };
+
+const DRESSING_Q = [
+  { id:"usage", label:"Usage principal", opts:["Chambre adulte couple","Chambre adulte seul","Chambre enfant","Couloir / Entrée","Autre"] },
+  { id:"ouverture", label:"Type d'ouverture", opts:["Portes battantes","Portes coulissantes","Ouvert (sans portes)","À décider"] },
+  { id:"vetLong", label:"Vêtements longs (robes, manteaux)", opts:["Peu (< 5)","Moyen (5-15)","Beaucoup (> 15)"] },
+  { id:"vetCourt", label:"Vêtements courts", opts:["Peu","Moyen","Beaucoup"] },
+  { id:"chaussures", label:"Paires de chaussures", opts:["< 10","10-30","> 30"] },
+  { id:"accessoires", label:"Accessoires (multi-choix)", opts:["Sacs","Ceintures","Bijoux","Chapeaux","Valises"], multi:true },
+  { id:"tiroirs", label:"Besoin de tiroirs", opts:["Non","Quelques-uns","Nombreux"] },
+  { id:"miroir", label:"Miroir intégré", opts:["Oui","Non","À décider"] },
+  { id:"eclairage", label:"Éclairage intégré", opts:["Oui","Non","À décider"] },
+];
+
+const CUISINE_Q = [
+  { id:"nbPersonnes", label:"Nombre de personnes", opts:["1-2","3-4","5+"] },
+  { id:"usage", label:"Intensité d'usage", opts:["Quotidien intense","Usage modéré","Occasionnel"] },
+  { id:"ilot", label:"Îlot central", opts:["Oui souhaité","Non","Si place le permet"] },
+  { id:"electromenager", label:"Électroménager à intégrer (multi)", opts:["Four encastré","Micro-ondes","Lave-vaisselle","Réfrigérateur","Cave à vin","Hotte"], multi:true },
+  { id:"evier", label:"Évier", opts:["Simple bac","Double bac","À décider"] },
+  { id:"placards", label:"Placards hauts", opts:["Oui","Non","Partiellement"] },
+];
+
+let state = {
+  step: 0,
+  activePiece: null,
+  mission: { type:"", operateur:"", date: new Date().toISOString().split("T")[0], modules:[] },
+  client: { nom:"", tel:"", email:"", adresse:"" },
+  pieces: [],
+  style: { ambiances:[], couleursPref:"", couleursEviter:"", references:"", materiaux:[] },
+  budget: { fourchette:"", precision:"", delai:"" },
+  notes: { contraintes:"", libres:"" },
+};
+
+function today() {
+  return new Date().toLocaleDateString("fr-FR", { weekday:"short", day:"2-digit", month:"short", year:"numeric" });
+}
+
+function render() {
+  document.getElementById("headerDate").textContent = today();
+  renderProgress();
+  renderNav();
+  if (state.step === STEPS.indexOf("summary")) { renderSummary(); return; }
+  if (state.activePiece !== null) { renderPieceDetail(); return; }
+  renderStep();
+}
+
+function renderProgress() {
+  const track = document.getElementById("progressTrack");
+  const labels = document.getElementById("progressLabels");
+  track.innerHTML = "";
+  labels.innerHTML = "";
+  STEP_LABELS.forEach((label, i) => {
+    const seg = document.createElement("div");
+    seg.className = "progress-seg" + (i < state.step ? " done" : i === state.step ? " active" : "");
+    track.appendChild(seg);
+    const lbl = document.createElement("div");
+    lbl.className = "progress-label" + (i < state.step ? " done" : i === state.step ? " active" : "");
+    lbl.textContent = label;
+    labels.appendChild(lbl);
+  });
+}
+
+function renderNav() {
+  const nav = document.getElementById("navBar");
+  nav.innerHTML = "";
+  if (state.activePiece !== null) {
+    const back = document.createElement("button");
+    back.className = "btn btn-back"; back.textContent = "← Pièces";
+    back.onclick = () => { state.activePiece = null; render(); };
+    nav.appendChild(back);
+    return;
+  }
+  if (state.step > 0 && state.step < STEPS.length - 1) {
+    const back = document.createElement("button");
+    back.className = "btn btn-back"; back.textContent = "← Retour";
+    back.onclick = () => { state.step--; render(); };
+    nav.appendChild(back);
+  }
+  if (state.step < STEPS.length - 2) {
+    const ok = canNext();
+    const next = document.createElement("button");
+    next.className = "btn btn-next" + (ok ? "" : " disabled");
+    next.textContent = "Suivant →";
+    next.onclick = () => { if (canNext()) { state.step++; render(); } };
+    nav.appendChild(next);
+  } else if (state.step === STEPS.length - 2) {
+    const sum = document.createElement("button");
+    sum.className = "btn btn-summary"; sum.textContent = "Voir le récap";
+    sum.onclick = () => { state.step = STEPS.length - 1; render(); };
+    nav.appendChild(sum);
+  } else {
+    const restart = document.createElement("button");
+    restart.className = "btn btn-next"; restart.textContent = "← Modifier";
+    restart.onclick = () => { state.step = STEPS.length - 2; render(); };
+    nav.appendChild(restart);
+    const reset = document.createElement("button");
+    reset.className = "btn btn-back"; reset.textContent = "Nouvelle mission";
+    reset.onclick = () => { if (confirm("Nouvelle mission ? Toutes les données seront effacées.")) { state = { step:0, activePiece:null, mission:{type:"",operateur:"",date:new Date().toISOString().split("T")[0],modules:[]}, client:{nom:"",tel:"",email:"",adresse:""}, pieces:[], style:{ambiances:[],couleursPref:"",couleursEviter:"",references:"",materiaux:[]}, budget:{fourchette:"",precision:"",delai:""}, notes:{contraintes:"",libres:""} }; render(); } };
+    nav.appendChild(reset);
+  }
+}
+
+function canNext() {
+  if (state.step === 0) return state.mission.type !== "" && state.mission.modules.length > 0;
+  if (state.step === 1) return state.client.nom.trim() !== "";
+  return true;
+}
+
+function renderStep() {
+  const c = document.getElementById("mainContent");
+  const stepName = STEPS[state.step];
+  if (stepName === "mission") c.innerHTML = buildMission();
+  else if (stepName === "client") c.innerHTML = buildClient();
+  else if (stepName === "pieces") c.innerHTML = buildPieces();
+  else if (stepName === "style") c.innerHTML = buildStyle();
+  else if (stepName === "budget") c.innerHTML = buildBudget();
+  else if (stepName === "notes") c.innerHTML = buildNotes();
+  bindInputs();
+}
+
+// ─── MISSION ───
+function buildMission() {
+  const m = state.mission;
+  let html = '<div class="section-title">Mission</div>';
+  html += field("Type de mission", chips(["Sous-traitance","Direct client"], m.type, "mission_type"));
+  if (m.type === "Sous-traitance") {
+    html += field("Opérateur / Donneur d'ordre", `<input type="text" id="f_operateur" value="${esc(m.operateur)}" placeholder="ex: ECOPRO ANTILLES"/>`);
+  }
+  html += field("Date du RDV", `<input type="date" id="f_date" value="${m.date}"/>`);
+  html += field("Type(s) de mission (plusieurs possibles)", chips(Object.entries(MODULE_LABELS).map(([k,v]) => k), m.modules, "mission_modules", true, Object.values(MODULE_LABELS)));
+  return html;
+}
+
+// ─── CLIENT ───
+function buildClient() {
+  const cl = state.client;
+  let html = '<div class="section-title">Informations client</div>';
+  html += field("Nom complet *", `<input type="text" id="f_nom" value="${esc(cl.nom)}" placeholder="Mme / M. Nom Prénom"/>`);
+  html += field("Téléphone", `<input type="tel" id="f_tel" value="${esc(cl.tel)}" placeholder="+596 6XX XXX XXX"/>`);
+  html += field("Email", `<input type="email" id="f_email" value="${esc(cl.email)}" placeholder="email@example.com"/>`);
+  html += field("Adresse des travaux", `<textarea id="f_adresse" placeholder="Adresse complète">${esc(cl.adresse)}</textarea>`);
+  return html;
+}
+
+// ─── PIECES LIST ───
+function buildPieces() {
+  let html = '<div class="section-title">Pièces à traiter</div>';
+  if (state.pieces.length === 0) html += '<div class="empty-state">Aucune pièce ajoutée</div>';
+  state.pieces.forEach((p, i) => {
+    const mod = p.module ? MODULE_LABELS[p.module] : "— module non défini";
+    const dims = (p.longueur && p.largeur) ? ` · ${p.longueur}×${p.largeur}m` : "";
+    html += `<div class="piece-card" onclick="openPiece(${i})">
+      <div>
+        <div class="piece-card-name">${esc(p.nom) || "Pièce " + (i+1)}</div>
+        <div class="piece-card-sub">${mod}${dims}</div>
+      </div>
+      <span class="piece-arrow">›</span>
+    </div>`;
+  });
+  html += `<button class="add-piece-btn" onclick="addPiece()">+ Ajouter une pièce</button>`;
+  return html;
+}
+
+// ─── PIECE DETAIL ───
+function renderPieceDetail() {
+  const c = document.getElementById("mainContent");
+  const i = state.activePiece;
+  const p = state.pieces[i];
+  const qs = p.module === "dressing" ? DRESSING_Q : p.module === "cuisine" ? CUISINE_Q : [];
+
+  let html = `<button class="back-link" onclick="closePiece()">← Retour aux pièces</button>`;
+  html += `<div class="section-title">Pièce ${i+1}</div>`;
+  html += field("Nom de la pièce", `<input type="text" id="fp_nom" value="${esc(p.nom)}" placeholder="ex: Chambre principale"/>`);
+  html += field("Type de mission", chips(Object.entries(MODULE_LABELS).map(([k]) => k), p.module ? [p.module] : [], "piece_module", false, Object.values(MODULE_LABELS)));
+
+  html += '<div class="dims">';
+  html += field("Longueur (m)", `<input type="text" id="fp_lon" value="${esc(p.longueur)}" placeholder="0.00"/>`);
+  html += field("Largeur (m)", `<input type="text" id="fp_lar" value="${esc(p.largeur)}" placeholder="0.00"/>`);
+  html += field("Hauteur (m)", `<input type="text" id="fp_hau" value="${esc(p.hauteur)}" placeholder="0.00"/>`);
+  html += '</div>';
+
+  if (p.longueur && p.largeur) {
+    const surf = (parseFloat(p.longueur) * parseFloat(p.largeur)).toFixed(2);
+    html += `<div class="surface-badge">Surface : ${surf} m²</div>`;
+  }
+
+  if (qs.length > 0) {
+    html += `<div class="section-title" style="margin-top:8px">Questions spécifiques</div>`;
+    qs.forEach(q => {
+      const sel = p.moduleData[q.id] || (q.multi ? [] : "");
+      html += field(q.label, chips(q.opts, sel, "pq_" + q.id, !!q.multi));
+    });
+  }
+
+  html += field("Notes / observations", `<textarea id="fp_notes" placeholder="Contraintes, accès, points d'attention...">${esc(p.notes)}</textarea>`);
+  html += `<button class="delete-btn" onclick="deletePiece(${i})">Supprimer cette pièce</button>`;
+
+  c.innerHTML = html;
+  bindPieceInputs(i);
+}
+
+// ─── STYLE ───
+function buildStyle() {
+  const s = state.style;
+  const ambiances = ["Contemporain","Industriel","Scandinave","Tropical","Classique","Minimaliste","Coloré","Nature / Wabi-sabi"];
+  const mats = ["Bois naturel","Bois laqué","Métal","Verre","Béton","Tissu","Rotin / Osier","Stratifié"];
+  let html = '<div class="section-title">Style et ambiance</div>';
+  html += field("Ambiances souhaitées (plusieurs)", chips(ambiances, s.ambiances, "style_ambiances", true));
+  html += field("Couleurs préférées", `<input type="text" id="f_couleurspref" value="${esc(s.couleursPref)}" placeholder="ex: Blanc, bois clair, touches vert"/>`);
+  html += field("Couleurs à éviter", `<input type="text" id="f_couleurseviter" value="${esc(s.couleursEviter)}" placeholder="ex: Pas de rouge, pas de noir"/>`);
+  html += field("Références (Pinterest, photos...)", `<textarea id="f_references" placeholder="Liens, descriptions, inspirations...">${esc(s.references)}</textarea>`);
+  html += field("Matériaux appréciés", chips(mats, s.materiaux, "style_materiaux", true));
+  return html;
+}
+
+// ─── BUDGET ───
+function buildBudget() {
+  const b = state.budget;
+  const fourchettes = ["< 2 000€","2 000 – 5 000€","5 000 – 10 000€","10 000 – 20 000€","> 20 000€","Non défini"];
+  const delais = ["Urgent (< 1 mois)","2-3 mois","3-6 mois","6 mois et +","Flexible"];
+  let html = '<div class="section-title">Budget et délai</div>';
+  html += field("Fourchette budget globale", chips(fourchettes, b.fourchette ? [b.fourchette] : [], "budget_fourchette", false));
+  html += field("Précisions budget", `<textarea id="f_budgetprecision" placeholder="Fourniture seule, pose incluse, mobilier sur mesure...">${esc(b.precision)}</textarea>`);
+  html += field("Délai souhaité", chips(delais, b.delai ? [b.delai] : [], "budget_delai", false));
+  return html;
+}
+
+// ─── NOTES ───
+function buildNotes() {
+  const n = state.notes;
+  let html = '<div class="section-title">Notes et contraintes</div>';
+  html += field("Contraintes techniques connues", `<textarea id="f_contraintes" rows="4" placeholder="Murs porteurs, gaines, humidité, accès difficile...">${esc(n.contraintes)}</textarea>`);
+  html += field("Notes libres du relevé", `<textarea id="f_noteslibres" rows="5" placeholder="Observations terrain, remarques client, points à vérifier...">${esc(n.libres)}</textarea>`);
+  return html;
+}
+
+// ─── SUMMARY ───
+function renderSummary() {
+  const c = document.getElementById("mainContent");
+  const m = state.mission; const cl = state.client;
+  let html = '<div class="section-title">Récapitulatif mission</div>';
+
+  html += sumSection("Mission", [
+    ["Type", m.type],
+    m.operateur ? ["Opérateur", m.operateur] : null,
+    ["Date", m.date],
+    ["Modules", m.modules.map(k => MODULE_LABELS[k]).join(", ")],
+  ]);
+
+  html += sumSection("Client", [
+    ["Nom", cl.nom],
+    cl.tel ? ["Tél", cl.tel] : null,
+    cl.email ? ["Email", cl.email] : null,
+    cl.adresse ? ["Adresse", cl.adresse] : null,
+  ]);
+
+  if (state.pieces.length > 0) {
+    html += `<div class="sum-section"><div class="sum-title">Pièces (${state.pieces.length})</div>`;
+    state.pieces.forEach((p, i) => {
+      html += `<div class="sum-piece">`;
+      html += `<div class="sum-piece-title">${esc(p.nom) || "Pièce " + (i+1)} — ${p.module ? MODULE_LABELS[p.module] : "?"}</div>`;
+      if (p.longueur) html += `<div class="sum-piece-row">Dim : ${p.longueur} × ${p.largeur} × ${p.hauteur} m</div>`;
+      Object.entries(p.moduleData).forEach(([k, v]) => {
+        if (v && (!Array.isArray(v) || v.length > 0)) {
+          html += `<div class="sum-piece-row">${k} : ${Array.isArray(v) ? v.join(", ") : v}</div>`;
+        }
+      });
+      if (p.notes) html += `<div class="sum-piece-row" style="color:var(--gray-blue);font-style:italic">${esc(p.notes)}</div>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+
+  const s = state.style;
+  if (s.ambiances.length > 0 || s.couleursPref || s.materiaux.length > 0) {
+    html += sumSection("Style", [
+      s.ambiances.length ? ["Ambiances", s.ambiances.join(", ")] : null,
+      s.couleursPref ? ["Couleurs +", s.couleursPref] : null,
+      s.couleursEviter ? ["Couleurs -", s.couleursEviter] : null,
+      s.references ? ["Références", s.references] : null,
+      s.materiaux.length ? ["Matériaux", s.materiaux.join(", ")] : null,
+    ]);
+  }
+
+  const b = state.budget;
+  html += sumSection("Budget et délai", [
+    b.fourchette ? ["Fourchette", b.fourchette] : null,
+    b.precision ? ["Précisions", b.precision] : null,
+    b.delai ? ["Délai", b.delai] : null,
+  ]);
+
+  const n = state.notes;
+  if (n.contraintes || n.libres) {
+    html += sumSection("Notes", [
+      n.contraintes ? ["Contraintes", n.contraintes] : null,
+      n.libres ? ["Notes", n.libres] : null,
+    ]);
+  }
+
+  html += `<div class="sum-footer">JC Studio SASU · contact@jcstudio.fr · SIREN 103 315 107</div>`;
+  c.innerHTML = html;
+}
+
+function sumSection(title, rows) {
+  let html = `<div class="sum-section"><div class="sum-title">${title}</div>`;
+  rows.forEach(row => {
+    if (!row || !row[1]) return;
+    html += `<div class="sum-row"><span class="sum-label">${row[0]}</span><span class="sum-value">${esc(String(row[1]))}</span></div>`;
+  });
+  return html + `</div>`;
+}
+
+// ─── CHIPS BUILDER ───
+function chips(opts, selected, key, multi, labels) {
+  let html = `<div class="chips" id="chips_${key}">`;
+  opts.forEach((opt, idx) => {
+    const label = labels ? labels[idx] : opt;
+    const isActive = Array.isArray(selected) ? selected.includes(opt) : selected === opt;
+    html += `<div class="chip${isActive ? " active" : ""}" onclick="toggleChip('${key}','${opt.replace(/'/g,"\\'")}',${multi})">${esc(label)}</div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function field(label, content) {
+  return `<div class="field"><div class="field-label">${label}</div>${content}</div>`;
+}
+
+function esc(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ─── CHIP TOGGLE ───
+function toggleChip(key, value, multi) {
+  if (key === "mission_type") {
+    state.mission.type = value; render(); return;
+  }
+  if (key === "mission_modules") {
+    const arr = state.mission.modules;
+    state.mission.modules = arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
+    render(); return;
+  }
+  if (key === "style_ambiances") {
+    const arr = state.style.ambiances;
+    state.style.ambiances = arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
+    render(); return;
+  }
+  if (key === "style_materiaux") {
+    const arr = state.style.materiaux;
+    state.style.materiaux = arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
+    render(); return;
+  }
+  if (key === "budget_fourchette") {
+    state.budget.fourchette = state.budget.fourchette === value ? "" : value;
+    render(); return;
+  }
+  if (key === "budget_delai") {
+    state.budget.delai = state.budget.delai === value ? "" : value;
+    render(); return;
+  }
+  if (key === "piece_module" && state.activePiece !== null) {
+    const p = state.pieces[state.activePiece];
+    p.module = p.module === value ? "" : value;
+    p.moduleData = {};
+    renderPieceDetail(); return;
+  }
+  if (key.startsWith("pq_") && state.activePiece !== null) {
+    const qid = key.replace("pq_", "");
+    const p = state.pieces[state.activePiece];
+    if (multi) {
+      const arr = p.moduleData[qid] || [];
+      p.moduleData[qid] = arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
+    } else {
+      p.moduleData[qid] = p.moduleData[qid] === value ? "" : value;
+    }
+    renderPieceDetail(); return;
+  }
+}
+
+// ─── BIND INPUTS ───
+function bindInputs() {
+  const bind = (id, setter) => { const el = document.getElementById(id); if (el) el.addEventListener("input", e => setter(e.target.value)); };
+  bind("f_operateur", v => state.mission.operateur = v);
+  bind("f_date", v => state.mission.date = v);
+  bind("f_nom", v => state.client.nom = v);
+  bind("f_tel", v => state.client.tel = v);
+  bind("f_email", v => state.client.email = v);
+  bind("f_adresse", v => state.client.adresse = v);
+  bind("f_couleurspref", v => state.style.couleursPref = v);
+  bind("f_couleurseviter", v => state.style.couleursEviter = v);
+  bind("f_references", v => state.style.references = v);
+  bind("f_budgetprecision", v => state.budget.precision = v);
+  bind("f_contraintes", v => state.notes.contraintes = v);
+  bind("f_noteslibres", v => state.notes.libres = v);
+}
+
+function bindPieceInputs(i) {
+  const bind = (id, setter) => { const el = document.getElementById(id); if (el) el.addEventListener("input", e => setter(e.target.value)); };
+  bind("fp_nom", v => { state.pieces[i].nom = v; });
+  bind("fp_notes", v => { state.pieces[i].notes = v; });
+  bind("fp_lon", v => { state.pieces[i].longueur = v; renderPieceDetail(); });
+  bind("fp_lar", v => { state.pieces[i].largeur = v; renderPieceDetail(); });
+  bind("fp_hau", v => { state.pieces[i].hauteur = v; });
+}
+
+// ─── PIECES ACTIONS ───
+function addPiece() {
+  state.pieces.push({ id: Date.now(), nom:"", module:"", longueur:"", largeur:"", hauteur:"", notes:"", moduleData:{} });
+  state.activePiece = state.pieces.length - 1;
+  render();
+}
+
+function openPiece(i) { state.activePiece = i; render(); }
+function closePiece() { state.activePiece = null; render(); }
+function deletePiece(i) {
+  if (confirm("Supprimer cette pièce ?")) {
+    state.pieces.splice(i, 1);
+    state.activePiece = null;
+    render();
+  }
+}
+
+// ─── INIT ───
+render();
+</script>
+</body>
+</html>
